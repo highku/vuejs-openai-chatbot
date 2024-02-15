@@ -1,7 +1,7 @@
 .DS_Store
 node_modules
 /dist
-
+.env
 
 # local env files
 .env.local
@@ -21,3 +21,10 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# firebase files
+firestore-debug.log
+*-debug.log
+/.firebase
+
+assistant_definition.txt
