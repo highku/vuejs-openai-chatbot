@@ -7,8 +7,8 @@
     </header> -->
     <div v-if="threads.length" class="container mx-auto format">
       <div class="flex justify-end items-center pt-4 pb-4">
-        <button @click="startNewThread" class="text-sm bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded">
-          Start New Chat
+        <button @click="startNewThread" class="text-sm bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded-md">
+          Start New Session
         </button>
       </div>
       <div class="table-wrp pt-0">
@@ -44,10 +44,10 @@
     <div v-else class="container mx-auto format">
       <div class="flex flex-col pt-52 justify-center">
         <div class="flex justify-center">
-          <p>No historical threads found.</p>
+          <p>No historical sessions found.</p>
         </div>
         <div class="flex justify-center">
-          <button @click="startNewThread" class="text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Start Chat</button>
+          <button @click="startNewThread" class="text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Start New Session</button>
         </div>
       </div>
     </div>

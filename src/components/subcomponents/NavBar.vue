@@ -13,7 +13,7 @@
         </div>
         <div class="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
           <div class="flex flex-shrink-0 items-center">
-            <img class="h-8 w-auto" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=500" alt="Your Company" />
+            <img class="h-8 w-auto" :src="logo" alt="Your Company" />
           </div>
           <div class="hidden sm:ml-6 sm:block">
             <div class="flex space-x-4">
@@ -54,8 +54,9 @@
 
 <script>
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
-import { Bars3Icon, XMarkIcon } from '@heroicons/vue/outline'
+import { Bars3Icon, XMarkIcon } from '@heroicons/vue/24/outline'
 import { mapState } from 'vuex';
+import logo from '@/assets/logo.png';
 
 export default {
   computed: {
@@ -64,8 +65,9 @@ export default {
   data() {
     return {
       navigation: [
-        { name: 'My Chats', to: '/', current: true }
+        { name: 'My Sessions', to: '/', current: true }
       ],
+      logo
     };
   },
   components: {

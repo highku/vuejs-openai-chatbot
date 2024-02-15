@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div class="container mx-auto px-4 format py-4">
-      <ChatWindow :showThinking="thread.showThinking" :messages="thread.messages" />
-      <UserInput :disableSendButton="thread.showThinking"  @send="sendMessage" />
+    <div class="container mx-auto px-4 format py-2">
+      <ChatWindow :thinking="thread.thinking" :messages="thread.messages" />
+      <UserInput :thinking="thread.thinking"  @send="sendMessage" />
     </div>
   </div>
 </template>
@@ -31,13 +31,13 @@ export default {
         id: this.$route.params.id,
         messages: [],
         messagesListener: null,
-        showThinking: false
+        thinking: false
       }
     };
   },
   methods: {
     async sendMessage({ text, files }) {
-      this.thread.showThinking = true;
+      this.thread.thinking = true;
       // handle the send event
       // text is the text message
       // files is an array of attached files, or an empty array if no files are attached
@@ -104,7 +104,7 @@ export default {
       snapshot.docChanges().forEach(change => {
         if (change.type === 'added') {
           if (change.doc.data().role === 'assistant') {
-            this.thread.showThinking = false;
+            this.thread.thinking = false;
           }
 
           console.log('New message added: ', change.doc.data());

@@ -1,6 +1,6 @@
 <template>
-    <div class="p-2 border rounded-md">
-      <textarea v-model="input" class="w-full h-24 p-3 rounded-md border-hidden focus:border-transparent focus:ring-0" placeholder="Type your message...">
+    <div class="p-2 border rounded-md bg-neutral-50">
+      <textarea v-model="input" class="w-full h-24 p-3 rounded-md border-hidden focus:border-transparent focus:ring-0 bg-neutral-50" placeholder="Type your message...">
       </textarea>
       <div v-for="(file, index) in files" :key="index" class="inline-block bg-blue-500 text-white rounded-full px-2 py-1 text-xs mr-2 mb-2">
         {{ file.name }}
@@ -13,7 +13,7 @@
         <button @click="attach" class="top-2 right-2 mr-2 text-blue-700 border border-blue-700 hover:bg-blue-700 hover:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm p-2.5 text-center inline-flex items-center dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:focus:ring-blue-800 dark:hover:bg-blue-500">
           <i class="fas fa-paperclip"></i>
         </button>
-        <button :disabled="disableSendButton" @click="send" class="bg-blue-500 text-white px-4 py-2 rounded-md text-sm disabled:cursor-not-allowed">Send</button>
+        <button :disabled="thikning || !input" @click="send" class="bg-blue-500 disabled:bg-blue-200 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm">Send</button>
       </div>
     </div>
 </template>
@@ -27,7 +27,7 @@ export default {
     };
   },
   props: {
-    disableSendButton: {
+    thinking: {
       type: Boolean,
       default: false
     }
