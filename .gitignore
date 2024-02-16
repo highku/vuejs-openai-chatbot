@@ -28,3 +28,5 @@ firestore-debug.log
 /.firebase
 
 assistant_definition.txt
+
+firebaseConfig.json
