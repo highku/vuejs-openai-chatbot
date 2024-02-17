@@ -57,8 +57,8 @@ router.beforeEach((to, from, next) => {
 const store = createStore({
   state() {
     return {
-      user: null, 
       // your state here
+      user: null, 
     }
   },
   mutations: {

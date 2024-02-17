@@ -6,7 +6,7 @@
 
 <script>
 import { auth } from '../firebaseInit.js'; 
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, getAdditionalUserInfo } from 'firebase/auth';
 import { mapState } from 'vuex';
 
 export default {
@@ -20,33 +20,20 @@ export default {
       try {
         const result = 
           await signInWithPopup(auth, provider);
+        const { isNewUser } = getAdditionalUserInfo(result);
+
         this.$store.commit('setUser', result.user);
-        this.$router.push('/thread/new');
-        
-        //if user if new, push to thread page
-        // if (result.additionalUserInfo.isNewUser) {
-        //   console.log("New user");
-        //   this.$router.push('/thread');
-        // }
-        // //if user is not new, push to home page
-        // else {
-        //   console.log("Old user");
-        //   this.$router.push('/');
-        // }
-        // This gives you a Google Access Token. You can use it to access the Google API.
-        // var token = result.credential.accessToken;
-        // The signed-in user info.
-        // var user = result.user;
-        // ...
+        if (isNewUser) {
+          console.log("New user");
+          this.$router.push('/thread/new');
+        }
+        else {
+          console.log("Old user");
+          this.$router.push('/');
+        }        
       } catch (error) {
-        // Handle Errors here.
-        // var errorCode = error.code;
-        // var errorMessage = error.message;
-        // // The email of the user's account used.
-        // var email = error.email;
-        // // The firebase.auth.AuthCredential type that was used.
-        // var credential = error.credential;
-        // ...
+        console.error(error);
+        alert('Failed to sign in with Google');
       }
     }
   }
