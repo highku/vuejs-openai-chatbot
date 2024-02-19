@@ -107,7 +107,6 @@ export default {
             this.thread.thinking = false;
           }
 
-          console.log('New message added: ', change.doc.data());
           const message = change.doc.data();
           if (!this.thread.messages.find(m => m.id === change.doc.id)) {
             if (message.role === "assistant") {

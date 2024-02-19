@@ -49,7 +49,4 @@ export default {
 </script>
 
 <style scoped>
-.chat-window {
-  /* Add your styles for the chat window here */
-}
 </style>

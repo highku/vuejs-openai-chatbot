@@ -77,8 +77,6 @@ export default {
     }
   },
   async created() {
-    console.log('created');
-
     // fetch historical threads from Firestore
     const q = query(collection(db, 'threads'), where('userId', '==', this.user.uid), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);

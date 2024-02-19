@@ -37,7 +37,6 @@ export default {
     }
   },
   mounted() {
-    console.log('mounted');
     for (let i = 0; i < this.message.files.length; i++) {
       getDownloadURL(ref(storage, this.message.files[i])).then((url) => {
         this.fileUrls.push(url);
@@ -62,5 +61,4 @@ export default {
   margin-top: -1em !important; 
   margin-bottom: -1em !important;
 }
-
 </style>

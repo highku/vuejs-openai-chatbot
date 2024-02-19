@@ -6,6 +6,7 @@ const { FieldValue } = require('@google-cloud/firestore');
 const { OpenAI } = require("openai");
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const { getDownloadURL } = require('firebase-admin/storage');
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
@@ -90,22 +91,35 @@ async function fetchAndSaveFileFromOpenAI(fileId, threadRef, userId) {
   return filePath;
 }
 
-async function addMessagesToFirestoreThread(threadRef, newMessages, userId, userMessageOpenaiId) {
-  const batch = admin.firestore().batch();
+async function addMessagesToFirestoreThread(threadRef, newMessages, userId, fromMessageId) {
+  //reverse the messages to get the latest message first
+  newMessages.data.reverse();
+  //remove all messages up to the user message
+  const fromMessageIndex = newMessages.data.findIndex(message => message.id === fromMessageId);
+  newMessages.data = newMessages.data.slice(fromMessageIndex);
+    
+  // const batch = admin.firestore().batch();
   let idx = 0;
-  while (newMessages.data[idx].id !== userMessageOpenaiId) {
+  while (idx < newMessages.data.length) {
     let message = newMessages.data[idx];
     idx++;
 
     if (message.role === 'user') {
       continue;
     }
-
-    const textContent = message.content.map(content => content.type === "text" ? content.text.value : '').join(' ');
+    let textContent = message.content.map(content => content.type === "text" ? content.text.value : '').join(' ');
+    const annotations = message.content.map(content => content.type === "text" ? content.text.annotations : []).flat(2); //.filter(annotation => annotation.type === "file_path")
     const fileIds = message.content.filter(content => content.type === "image_file").map(content => content.image_file.file_id);
     const firebaseStorageFiles = await Promise.all(fileIds.map(fileId => fetchAndSaveFileFromOpenAI(fileId, threadRef, userId)));
-    const messageRef = threadRef.collection('messages').doc();
-    batch.set(messageRef, {
+    
+    for (const annotation of annotations) {
+      const fileId = annotation.file_path.file_id;
+      const filePath = await fetchAndSaveFileFromOpenAI(fileId, threadRef, userId);
+      const downloadUrl = await getDownloadURL(admin.storage().bucket().file(filePath)); //throws error in emulator
+      textContent = textContent.replace(annotation.text, downloadUrl);
+    }
+
+    await admin.firestore().collection('threads').doc(threadRef.id).collection('messages').add({
       text: textContent,
       role: message.role,
       files: firebaseStorageFiles,
@@ -113,7 +127,6 @@ async function addMessagesToFirestoreThread(threadRef, newMessages, userId, user
       openaiMessageId: message.id
     });
   };
-  await batch.commit();
 }
 
 exports.createThread = functions.https.onCall(async (data, context) => {
@@ -133,7 +146,11 @@ exports.createThread = functions.https.onCall(async (data, context) => {
   return { id: newThread.id };
 });
 
-exports.onMessageAdded = functions.firestore.document('threads/{threadId}/messages/{messageId}')
+exports.onMessageAdded = functions.runWith(
+    {
+      timeoutSeconds: 300
+    }
+  ).firestore.document('threads/{threadId}/messages/{messageId}')
   .onCreate(async (snapshot, context) => {
     const messageData = snapshot.data();
     const threadId = context.params.threadId;
@@ -171,7 +188,7 @@ exports.onMessageAdded = functions.firestore.document('threads/{threadId}/messag
 
     let runResponse = await openai.beta.threads.runs.create(openaiThread, { assistant_id: assistantId });
     runResponse = await waitForThreadRunCompletion(openaiThread, runResponse);
-    const newMessages = await openai.beta.threads.messages.list(openaiThread, { limit: 4 });
+    const newMessages = await openai.beta.threads.messages.list(openaiThread, { limit: 10 });
     await addMessagesToFirestoreThread(threadRef, newMessages, threadData.userId, userMessage.id);
     return { status: 'success' };
   });

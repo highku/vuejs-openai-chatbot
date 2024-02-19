@@ -24,11 +24,9 @@ export default {
 
         this.$store.commit('setUser', result.user);
         if (isNewUser) {
-          console.log("New user");
           this.$router.push('/thread/new');
         }
         else {
-          console.log("Old user");
           this.$router.push('/');
         }        
       } catch (error) {

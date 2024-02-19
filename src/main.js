@@ -46,7 +46,6 @@ router.beforeEach((to, from, next) => {
   if (requiresAuth && !currentUser) {
     next('/login');
   } else if (isLoginPage && currentUser) {
-    console.log('User is already logged in');
     next('/');
   } else {
     next();
