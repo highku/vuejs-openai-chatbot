@@ -68,7 +68,7 @@ async function waitForThreadRunCompletion(openaiThread, runResponse) {
   return runResponse;
 }
 
-async function fetchAndSaveFileFromOpenAI(fileId, threadRef, userId) {
+async function fetchAndSaveFileFromOpenAI(fileId, threadRef, userId, fileType='image') {
   //Retry fetching the file from OpenAI maximum of three times
   let fileContent;
   for (let i = 0; i < MAX_RETRIES; i++) {
@@ -86,8 +86,14 @@ async function fetchAndSaveFileFromOpenAI(fileId, threadRef, userId) {
   const image_data = await fileContent.arrayBuffer();
   const image_data_buffer = Buffer.from(image_data);
   // Save the image to Firebase Storage
-  const filePath = `users/${userId}/threads/${threadRef.id}/${fileId}.png`;
-  await admin.storage().bucket().file(filePath).save(image_data_buffer, { contentType: 'image/png' });
+  let filePath = `users/${userId}/threads/${threadRef.id}/${fileId}`;
+  let fileMetadata = {}
+
+  if (fileType === 'image') {
+    filePath += '.png';
+    fileMetadata = { contentType: 'image/png' };
+  }
+  await admin.storage().bucket().file(filePath).save(image_data_buffer, fileMetadata);
   return filePath;
 }
 
@@ -114,7 +120,7 @@ async function addMessagesToFirestoreThread(threadRef, newMessages, userId, from
     
     for (const annotation of annotations) {
       const fileId = annotation.file_path.file_id;
-      const filePath = await fetchAndSaveFileFromOpenAI(fileId, threadRef, userId);
+      const filePath = await fetchAndSaveFileFromOpenAI(fileId, threadRef, userId, 'text');
       const downloadUrl = await getDownloadURL(admin.storage().bucket().file(filePath)); //throws error in emulator
       textContent = textContent.replace(annotation.text, downloadUrl);
     }
