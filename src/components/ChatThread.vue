@@ -36,7 +36,7 @@ export default {
     };
   },
   methods: {
-    async sendMessage({ text, files }) {
+    async sendMessage({ text, files, images }) {
       this.thread.thinking = true;
       // handle the send event
       // text is the text message
@@ -54,17 +54,23 @@ export default {
         return uploadBytes(storageRef, file);
       });
       const snapshots = await Promise.all(uploadPromises);
-
-      // get download URLs
-      // const urlPromises = snapshots.map(snapshot => getDownloadURL(snapshot.ref));
-      // const urls = await Promise.all(urlPromises);
       const filePaths = snapshots.map(snapshot => snapshot.ref.fullPath);
+
+      //upload images to Firebase Storage
+      const imageUploadPromises = images.map((image, index) => {
+        const storageRef = ref(storage, `users/${userId}/threads/${this.thread.id}/${timestamp}_${index}_${image.name}`);
+        return uploadBytes(storageRef, image);
+      });
+      const imageSnapshots = await Promise.all(imageUploadPromises);
+      const imagePaths = imageSnapshots.map(snapshot => snapshot.ref.fullPath);
+
 
       // add the message to Firestore
       addDoc(collection(doc(db, 'threads', this.thread.id), 'messages'), {
         text: text,
         role: 'user',
         files: filePaths,
+        images: imagePaths,
         createdAt: serverTimestamp()
       });
     }

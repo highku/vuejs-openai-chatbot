@@ -38,7 +38,7 @@ async function createThreadInFirestore(userId, openaiThreadId) {
 async function downloadAndUploadFiles(files) {
   const openaiFiles = [];
   for (const filePath of files) {
-    const destination = '/tmp/' + uuidv4();
+    const destination = '/tmp/' + uuidv4() + filePath.split('/').pop();
     await admin.storage().bucket().file(filePath).download({ destination: destination });
     const fileCreateResponse = await openai.files.create({
       file: fs.createReadStream(destination),
@@ -49,13 +49,55 @@ async function downloadAndUploadFiles(files) {
   return openaiFiles;
 }
 
-async function addMessageToOpenAIThread(openaiThread, messageText, openaiFiles) {
+function isFileAcceptedForRetrieval(file) {
+  const acceptedExtensions = ['.c', '.cs', '.cpp', '.doc', '.docx', '.html', 
+    '.java', '.json', '.md', '.pdf', '.php', '.pptx', 
+    '.py', '.rb', '.tex', '.txt', '.css', '.js', '.sh', '.ts'];
+
+  if (acceptedExtensions.some(ext => file.filename.endsWith(ext))) {
+    return true;
+  }
+}
+
+function isFileAcceptedForInterpretation(file) {
+  const acceptedExtensions = ['.c', '.cs', '.cpp', '.doc', '.docx', '.html', 
+    '.java', '.json', '.md', '.pdf', '.php', '.pptx', 
+    '.py', '.rb', '.tex', '.txt', '.css', '.js', '.sh', '.ts', 
+    '.csv', '.jpeg', '.jpg', '.gif', '.png', '.tar', '.xlsx', '.xml', '.zip'];
+
+  if (acceptedExtensions.some(ext => file.filename.endsWith(ext))) {
+    return true;
+  }
+}
+
+async function addMessageToOpenAIThread(openaiThread, messageText, openaiFiles, openaiImages) {
+
+  var content = [];
+  if (messageText) {
+    content.push({ type: 'text', text: messageText });
+  }
+  for (const image of openaiImages) {
+    content.push({ type: 'image_file', image_file: { file_id: image.id } });
+  }
+
   return await openai.beta.threads.messages.create(
     openaiThread,
     { 
       role: 'user', 
-      content: messageText,
-      file_ids: openaiFiles.map(file => file.id)
+      content: content,
+      attachments: openaiFiles.map(file => {
+        var tools = [];
+        if (isFileAcceptedForRetrieval(file)) {
+          tools.push({ "type": "file_search" });
+        }
+        if (isFileAcceptedForInterpretation(file)) {
+          tools.push({ "type": "code_interpreter" });
+        }
+        return {
+          file_id: file.id,
+          tools: tools
+        }
+      })
     }
   );
 }
@@ -64,6 +106,7 @@ async function waitForThreadRunCompletion(openaiThread, runResponse) {
   while (runResponse.status === 'queued' ||  runResponse.status === 'in_progress') {
     await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL));
     runResponse = await openai.beta.threads.runs.retrieve(openaiThread, runResponse.id);
+    console.log(runResponse);
   }
   return runResponse;
 }
@@ -119,10 +162,12 @@ async function addMessagesToFirestoreThread(threadRef, newMessages, userId, from
     const firebaseStorageFiles = await Promise.all(fileIds.map(fileId => fetchAndSaveFileFromOpenAI(fileId, threadRef, userId)));
     
     for (const annotation of annotations) {
-      const fileId = annotation.file_path.file_id;
-      const filePath = await fetchAndSaveFileFromOpenAI(fileId, threadRef, userId, 'text');
-      const downloadUrl = await getDownloadURL(admin.storage().bucket().file(filePath)); //throws error in emulator
-      textContent = textContent.replace(annotation.text, downloadUrl);
+      if (annotation.type == 'file_path') {
+        const fileId = annotation.file_path.file_id;
+        const filePath = await fetchAndSaveFileFromOpenAI(fileId, threadRef, userId, 'text');
+        const downloadUrl = await getDownloadURL(admin.storage().bucket().file(filePath)); //throws error in emulator
+        textContent = textContent.replace(annotation.text, downloadUrl);
+      }
     }
 
     await admin.firestore().collection('threads').doc(threadRef.id).collection('messages').add({
@@ -140,7 +185,16 @@ exports.createThread = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('unauthenticated', 'The function must be called while authenticated.');
   }
   const userId = context.auth.uid;
-  const emptyThread = await openai.beta.threads.create();
+  const vectorStore = await openai.beta.vectorStores.create();
+  const emptyThread = await openai.beta.threads.create(
+    {
+      tool_resources: {
+        file_search: {
+          vector_store_ids: [vectorStore.id]
+        }
+      }
+    }
+  );
   const newThread = await createThreadInFirestore(userId, emptyThread.id);
   await newThread.collection('messages').add({
     text: 'Hello, how can I help you today?',
@@ -186,8 +240,10 @@ exports.onMessageAdded = functions.runWith(
     const messageText = messageData.text;
     const openaiThread = threadData.openaiThread;
     const files = messageData.files || [];
+    const images = messageData.images || [];
     const openaiFiles = await downloadAndUploadFiles(files);
-    const userMessage = await addMessageToOpenAIThread(openaiThread, messageText, openaiFiles);
+    const openaiImages = await downloadAndUploadFiles(images);
+    const userMessage = await addMessageToOpenAIThread(openaiThread, messageText, openaiFiles, openaiImages);
     await threadRef.collection('messages').doc(snapshot.id).update({
       openaiMessageId: userMessage.id
     });

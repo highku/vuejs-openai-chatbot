@@ -9,6 +9,18 @@
         <a v-else :href="url" download>Download file</a>
       </div>
     </div>
+    <div v-if="fileUrls && fileUrls.length">
+      <div v-for="(url, index) in fileUrls" :key="index">
+        <img v-if="mimeTypes[index] ? mimeTypes[index].startsWith('image') : false" :src="url" class="max-h-64 rounded-md" />
+        <video v-else-if="mimeTypes[index] ? mimeTypes[index].startsWith('video') : false" :src="url" class="max-h-64 rounded-md" controls />
+        <a v-else :href="url" download>Download file</a>
+      </div>
+    </div>
+    <div v-if="imageUrls && imageUrls.length">
+      <div v-for="(url, index) in imageUrls" :key="index">
+        <img :src="url" class="max-h-64 rounded-md" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -27,7 +39,8 @@ export default {
   data() {
     return {
       mimeTypes: [],
-      fileUrls: []
+      fileUrls: [],
+      imageUrls: []
     }
   },
   methods: {
@@ -44,6 +57,12 @@ export default {
 
       getMetadata(ref(storage, this.message.files[i])).then((metadata) => {
         this.mimeTypes.push(metadata.contentType);
+      });
+    }
+
+    for (let i = 0; i < this.message.images?.length; i++) {
+      getDownloadURL(ref(storage, this.message.images[i])).then((url) => {
+        this.imageUrls.push(url);
       });
     }
   }
